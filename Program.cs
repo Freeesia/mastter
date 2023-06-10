@@ -46,7 +46,11 @@ static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options)
 
 static async Task Post(ILogger logger, string id, Status status, TwitterClient twitter)
 {
-    if (status.Account.Id != id)
+    if (status.Account.Id != id ||
+        status.InReplyToAccountId != null ||
+        status.InReplyToId != null ||
+        status.Mentions.Any() ||
+        status.Visibility != Visibility.Public)
     {
         return;
     }
