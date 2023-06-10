@@ -1,0 +1,4 @@
+Mastodonのアプリの登録
+Twitterのアプリの登録
+User authentication settingsの設定
+PINの入力

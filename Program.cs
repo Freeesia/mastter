@@ -17,19 +17,34 @@ await app.RunAsync();
 
 static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options)
 {
-    var (mastodonUrl, mastodonToken, twitterConsumerKey, twitterConsumerSecret, twitterAccessToken, twitterAccessTokenSecret) = options.Value;
-    var mastodon = new MastodonClient(mastodonUrl, mastodonToken);
-    var twitter = new TwitterClient(twitterConsumerKey, twitterConsumerSecret, twitterAccessToken, twitterAccessTokenSecret);
-    var mastodonMe = await mastodon.GetCurrentUser();
-    logger.LogInformation($"Logged in Mastodon as {mastodonMe.DisplayName} (@{mastodonMe.UserName})");
+    var value = options.Value;
+    var twitter = new TwitterClient(value.TwitterConsumerKey, value.TwitterConsumerSecret, value.TwitterBearerToken);
+    if (value is { TwitterAccessToken: null })
+    {
+        var authenticationRequest = await twitter.Auth.RequestAuthenticationUrlAsync();
+        logger.LogInformation($"Please visit {authenticationRequest.AuthorizationURL} and enter the PIN");
+        var pin = Console.ReadLine();
+        var userCredentials = await twitter.Auth.RequestCredentialsFromVerifierCodeAsync(pin, authenticationRequest);
+        logger.LogInformation($"Twitter access token: {userCredentials.AccessToken}, secret: {userCredentials.AccessTokenSecret}");
+        twitter = new(userCredentials);
+    }
+    else
+    {
+        twitter = new(value.TwitterConsumerKey, value.TwitterConsumerSecret, value.TwitterAccessToken, value.TwitterAccessTokenSecret);
+    }
     var twitterMe = await twitter.Users.GetAuthenticatedUserAsync();
     logger.LogInformation($"Logged in Twitter as {twitterMe.Name} (@{twitterMe.ScreenName})");
+
+    var mastodon = new MastodonClient(value.MastodonUrl, value.MastodonToken);
+    var mastodonMe = await mastodon.GetCurrentUser();
+    logger.LogInformation($"Logged in Mastodon as {mastodonMe.DisplayName} (@{mastodonMe.UserName})");
     var ust = mastodon.GetUserStreaming();
-    ust.OnUpdate += (sender, e) => Post(logger, mastodonMe.Id, e.Status, twitter);
+    ust.OnUpdate += async (sender, e) => await Post(logger, mastodonMe.Id, e.Status, twitter);
     await ust.Start();
+    // await Post(logger, mastodonMe.Id, (await mastodon.GetAccountStatuses(mastodonMe.Id)).First(), twitter);
 }
 
-static async void Post(ILogger logger, string id, Status status, TwitterClient twitter)
+static async Task Post(ILogger logger, string id, Status status, TwitterClient twitter)
 {
     if (status.Account.Id != id)
     {
@@ -47,18 +62,12 @@ record ConsoleOptions
     public required string MastodonToken { get; init; }
     public required string TwitterConsumerKey { get; init; }
     public required string TwitterConsumerSecret { get; init; }
-    public required string TwitterAccessToken { get; init; }
-    public required string TwitterAccessTokenSecret { get; init; }
-
-    public void Deconstruct(out string mastodonUrl, out string mastodonToken, out string twitterConsumerKey, out string twitterConsumerSecret, out string twitterAccessToken, out string twitterAccessTokenSecret)
-    {
-        mastodonUrl = MastodonUrl;
-        mastodonToken = MastodonToken;
-        twitterConsumerKey = TwitterConsumerKey;
-        twitterConsumerSecret = TwitterConsumerSecret;
-        twitterAccessToken = TwitterAccessToken;
-        twitterAccessTokenSecret = TwitterAccessTokenSecret;
-    }
+    public required string TwitterBearerToken { get; init; }
+    public string? TwitterAccessToken { get; init; }
+    public string? TwitterAccessTokenSecret { get; init; }
+    public string? TwitterClientId { get; init; }
+    public string? TwitterClientSecret { get; init; }
+    public string? TwitterPin { get; init; }
 }
 static class TwitterClientExtensions
 {

@@ -10,7 +10,7 @@
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "envFile": "${workspaceFolder}/.env",
-            "console": "internalConsole"
+            "console": "integratedTerminal"
         },
         {
             "name": "Docker .NET Launch",
