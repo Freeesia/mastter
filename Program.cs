@@ -55,19 +55,21 @@ static async Task Post(ILogger logger, string id, Status status, TwitterClient t
     {
         return;
     }
+    logger.LogInformation($"Posted from Mastodon {status.Id}");
     // 画像があったらダウンロードしてTwitterにアップロードする
     var medias = new List<string>();
     foreach (var media in status.MediaAttachments)
     {
         using var httpClient = new HttpClient();
         var mediaBytes = await httpClient.GetByteArrayAsync(media.Url);
-        var res = await twitter.Upload.UploadBinaryAsync(mediaBytes);
-        medias.Add(res.UploadedMediaInfo.MediaIdStr);
+        var mediaRes = await twitter.Upload.UploadBinaryAsync(mediaBytes);
+        medias.Add(mediaRes.UploadedMediaInfo.MediaIdStr);
     }
     var htmlDoc = new HtmlDocument();
     htmlDoc.LoadHtml(status.Content);
     var text = htmlDoc.DocumentNode.InnerText;
-    await twitter.PostStatusAsync(text, medias);
+    var res = await twitter.PostStatusAsync(text, medias);
+    logger.LogInformation($"Posted to Twitter {res.Id}");
 }
 
 record ConsoleOptions
@@ -87,12 +89,17 @@ record TweetV2(
     [property: JsonProperty("text")] string Text,
     [property: JsonProperty("media", NullValueHandling = NullValueHandling.Ignore)] MediaV2? Media);
 record MediaV2([property: JsonProperty("media_ids")] IReadOnlyList<string> MediaIds);
+record TwitterResponse<T>([property: JsonProperty("data")] T Data);
+record TweetV2Response(
+    [property: JsonProperty("id")] string Id,
+    [property: JsonProperty("text")] string Text,
+    [property: JsonProperty("edit_history_tweet_ids")] IReadOnlyList<string> EditHistoryTweetIds);
 static class TwitterClientExtensions
 {
-    public static Task<ITwitterResult> PostStatusAsync(this TwitterClient twitter, string text, IReadOnlyList<string> mediaIds)
+    public static async Task<TweetV2Response> PostStatusAsync(this TwitterClient twitter, string text, IReadOnlyList<string> mediaIds)
     {
         var tweetParams = twitter.Json.Serialize(new TweetV2(text, mediaIds.Any() ? new(mediaIds) : null));
-        return twitter.Execute.AdvanceRequestAsync(
+        var res = await twitter.Execute.AdvanceRequestAsync<TwitterResponse<TweetV2Response>>(
                 (ITwitterRequest request) =>
                 {
                     // Technically this implements IDisposable,
@@ -111,5 +118,6 @@ static class TwitterClientExtensions
                     request.Query.HttpContent = content;
                 }
             );
+        return res.Model.Data;
     }
 }
