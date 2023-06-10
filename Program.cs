@@ -5,6 +5,7 @@ using Mastonet.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Tweetinvi;
 using Tweetinvi.Core.Web;
 using Tweetinvi.Models;
@@ -54,10 +55,19 @@ static async Task Post(ILogger logger, string id, Status status, TwitterClient t
     {
         return;
     }
+    // 画像があったらダウンロードしてTwitterにアップロードする
+    var medias = new List<string>();
+    foreach (var media in status.MediaAttachments)
+    {
+        using var httpClient = new HttpClient();
+        var mediaBytes = await httpClient.GetByteArrayAsync(media.Url);
+        var res = await twitter.Upload.UploadBinaryAsync(mediaBytes);
+        medias.Add(res.UploadedMediaInfo.MediaIdStr);
+    }
     var htmlDoc = new HtmlDocument();
     htmlDoc.LoadHtml(status.Content);
     var text = htmlDoc.DocumentNode.InnerText;
-    await twitter.PostStatusAsync(text);
+    await twitter.PostStatusAsync(text, medias);
 }
 
 record ConsoleOptions
@@ -73,11 +83,15 @@ record ConsoleOptions
     public string? TwitterClientSecret { get; init; }
     public string? TwitterPin { get; init; }
 }
+record TweetV2(
+    [property: JsonProperty("text")] string Text,
+    [property: JsonProperty("media", NullValueHandling = NullValueHandling.Ignore)] MediaV2? Media);
+record MediaV2([property: JsonProperty("media_ids")] IReadOnlyList<string> MediaIds);
 static class TwitterClientExtensions
 {
-    public static Task<ITwitterResult> PostStatusAsync(this TwitterClient twitter, string text)
+    public static Task<ITwitterResult> PostStatusAsync(this TwitterClient twitter, string text, IReadOnlyList<string> mediaIds)
     {
-        var tweetParams = twitter.Json.Serialize(new { text });
+        var tweetParams = twitter.Json.Serialize(new TweetV2(text, mediaIds.Any() ? new(mediaIds) : null));
         return twitter.Execute.AdvanceRequestAsync(
                 (ITwitterRequest request) =>
                 {
