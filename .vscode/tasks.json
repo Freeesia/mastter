@@ -1,0 +1,92 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "docker-build",
+			"label": "docker-build: debug",
+			"dependsOn": [
+				"build"
+			],
+			"dockerBuild": {
+				"tag": "mastter:dev",
+				"target": "base",
+				"dockerfile": "${workspaceFolder}/Dockerfile",
+				"context": "${workspaceFolder}",
+				"pull": true
+			},
+			"netCore": {
+				"appProject": "${workspaceFolder}/mastter.csproj"
+			}
+		},
+		{
+			"type": "docker-build",
+			"label": "docker-build: release",
+			"dependsOn": [
+				"build"
+			],
+			"dockerBuild": {
+				"tag": "mastter:latest",
+				"dockerfile": "${workspaceFolder}/Dockerfile",
+				"context": "${workspaceFolder}",
+				"platform": "linux/amd64",
+				"pull": true
+			},
+			"netCore": {
+				"appProject": "${workspaceFolder}/mastter.csproj"
+			}
+		},
+		{
+			"type": "docker-run",
+			"label": "docker-run: debug",
+			"dependsOn": [
+				"docker-build: debug"
+			],
+			"dockerRun": {},
+			"netCore": {
+				"appProject": "${workspaceFolder}/mastter.csproj",
+				"enableDebugging": true
+			}
+		},
+		{
+			"type": "docker-run",
+			"label": "docker-run: release",
+			"dependsOn": [
+				"docker-build: release"
+			],
+			"dockerRun": {},
+			"netCore": {
+				"appProject": "${workspaceFolder}/mastter.csproj"
+			}
+		},
+		{
+			"type": "process",
+			"label": "build",
+			"command": "dotnet",
+			"args": [
+				"build",
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "process",
+			"label": "clean",
+			"command": "dotnet",
+			"args": [
+				"clean",
+			]
+		},
+		{
+			"type": "process",
+			"label": "publish",
+			"command": "dotnet",
+			"args": [
+				"publish",
+				"-c",
+				"Release",
+			]
+		}
+	]
+}
