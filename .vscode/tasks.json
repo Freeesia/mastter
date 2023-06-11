@@ -41,7 +41,11 @@
 			"dependsOn": [
 				"docker-build: debug"
 			],
-			"dockerRun": {},
+			"dockerRun": {
+				"envFiles": [
+					"${workspaceFolder}/.env"
+				],
+			},
 			"netCore": {
 				"appProject": "${workspaceFolder}/mastter.csproj",
 				"enableDebugging": true
@@ -53,7 +57,11 @@
 			"dependsOn": [
 				"docker-build: release"
 			],
-			"dockerRun": {},
+			"dockerRun": {
+				"envFiles": [
+					"${workspaceFolder}/.env"
+				],
+			},
 			"netCore": {
 				"appProject": "${workspaceFolder}/mastter.csproj"
 			}
