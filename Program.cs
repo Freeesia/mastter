@@ -80,9 +80,6 @@ record ConsoleOptions
     public required string TwitterBearerToken { get; init; }
     public string? TwitterAccessToken { get; init; }
     public string? TwitterAccessTokenSecret { get; init; }
-    public string? TwitterClientId { get; init; }
-    public string? TwitterClientSecret { get; init; }
-    public string? TwitterPin { get; init; }
 }
 record TweetV2(
     [property: JsonProperty("text")] string Text,
