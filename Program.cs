@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Tweetinvi;
-using Tweetinvi.Core.Web;
 using Tweetinvi.Models;
 
 var app = ConsoleApp.CreateBuilder(args)
@@ -67,7 +66,7 @@ static async Task Post(ILogger logger, string id, Status status, TwitterClient t
     }
     var htmlDoc = new HtmlDocument();
     htmlDoc.LoadHtml(status.Content);
-    var text = htmlDoc.DocumentNode.InnerText;
+    var text = htmlDoc.DocumentNode.InnerText();
     var res = await twitter.PostStatusAsync(text, medias);
     logger.LogInformation($"Posted to Twitter {res.Id}");
 }
@@ -119,5 +118,33 @@ static class TwitterClientExtensions
                 }
             );
         return res.Model.Data;
+    }
+}
+static class HtmlNodeExtensions
+{
+    public static string InnerText(this HtmlNode node)
+    {
+        var sb = new StringBuilder();
+        node.InnerTextCore(sb);
+        return sb.ToString();
+    }
+
+    private static void InnerTextCore(this HtmlNode node, StringBuilder sb)
+    {
+        if (node.HasChildNodes)
+        {
+            foreach (var child in node.ChildNodes)
+            {
+                child.InnerTextCore(sb);
+            }
+        }
+        else if (node.NodeType == HtmlNodeType.Text)
+        {
+            sb.Append(node.InnerText);
+        }
+        else if (node.NodeType == HtmlNodeType.Element && node.Name == "br")
+        {
+            sb.AppendLine();
+        }
     }
 }
