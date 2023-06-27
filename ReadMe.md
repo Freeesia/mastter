@@ -4,12 +4,22 @@
 
 このアプリケーションは、Mastodonに投稿した内容を自動的にTwitterに再投稿するコマンドラインアプリケーションです。Dockerを利用して常時起動します。
 
+> Twitterの無料APIは投稿制限が厳しいため、このアプリでは1プロセスにつき1ユーザーしか利用できません。
+
 ## 必要なもの
 
 1. Docker実行環境
 2. Mastodonアカウント
 3. Twitterアカウント
 4. TwitterとMastodonのAPIキー（個別に申請）
+
+### APIキーについて
+
+- MastodonのAPIキーには以下の権限が必要です：
+  - read:accounts
+  - read:statuses
+- TwitterのAPIキーには以下の権限が必要です：
+  - Read and write
 
 ## インストールと実行
 
