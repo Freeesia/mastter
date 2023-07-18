@@ -11,3 +11,4 @@ charset = utf-8
 trim_trailing_whitespace = false
 insert_final_newline = false
 
+dotnet_diagnostic.CA2254.severity = none

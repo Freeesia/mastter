@@ -2,16 +2,17 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using Tweetinvi;
 
 var app = ConsoleApp.CreateBuilder(args)
-    .ConfigureServices((ctx, services) => services.Configure<ConsoleOptions>(ctx.Configuration))
+    .ConfigureServices((ctx, services)
+        => services.Configure<ConsoleOptions>(ctx.Configuration)
+            .AddSingleton<IStatusLogStore, StatusLogStore>())
     .Build();
 app.AddRootCommand(Run);
 await app.RunAsync();
 
-static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options)
+static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options, IStatusLogStore store)
 {
     var value = options.Value;
     var twitter = new TwitterClient(value.TwitterConsumerKey, value.TwitterConsumerSecret, value.TwitterBearerToken);
@@ -35,7 +36,7 @@ static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options)
     var mastodonMe = await mastodon.GetCurrentUser();
     logger.LogInformation($"Logged in Mastodon as {mastodonMe.DisplayName} (@{mastodonMe.UserName})");
     var ust = mastodon.GetUserStreaming();
-    ust.OnUpdate += async (sender, e) => await twitter.CrossPost(mastodonMe.Id, e.Status, logger);
+    ust.OnUpdate += async (sender, e) => await twitter.CrossPost(mastodonMe.Id, e.Status, store, logger);
     await ust.Start();
     // await Post(logger, mastodonMe.Id, (await mastodon.GetAccountStatuses(mastodonMe.Id)).First(), twitter);
 }
@@ -50,12 +51,3 @@ record ConsoleOptions
     public string? TwitterAccessToken { get; init; }
     public string? TwitterAccessTokenSecret { get; init; }
 }
-record TweetV2(
-    [property: JsonProperty("text")] string Text,
-    [property: JsonProperty("media", NullValueHandling = NullValueHandling.Ignore)] MediaV2? Media);
-record MediaV2([property: JsonProperty("media_ids")] IReadOnlyList<string> MediaIds);
-record TwitterResponse<T>([property: JsonProperty("data")] T Data);
-record TweetV2Response(
-    [property: JsonProperty("id")] string Id,
-    [property: JsonProperty("text")] string Text,
-    [property: JsonProperty("edit_history_tweet_ids")] IReadOnlyList<string> EditHistoryTweetIds);
