@@ -8,7 +8,7 @@ static class AtProtocolExtensions
     public static async Task CrossPost(this ATProtocol atProtocol, Status status, IStatusLogStore store, ILogger logger)
     {
         // 画像があったらダウンロードしてBlueskeyにアップロードする
-        var medias = new List<Image>();
+        var medias = new List<ImageEmbed>();
         foreach (var media in status.MediaAttachments)
         {
             using var httpClient = new HttpClient();
@@ -23,13 +23,13 @@ static class AtProtocolExtensions
                 logger.LogError($"Failed to upload media: {error?.StatusCode} {error?.Detail}");
                 continue;
             }
-            medias.Add(mediaRes.Blob.ToImage());
+            medias.Add(new(mediaRes.Blob.ToImage(), media.Description ?? string.Empty));
         }
 
         {
             var text = status.GetContentText();
             var repId = await store.GetBlueskyPostAsync(status.InReplyToId);
-            var embed = medias.Any() ?  new ImagesEmbed(medias.Select(m => new ImageEmbed(m, string.Empty)).ToArray()) : null;
+            var embed = medias.Any() ?  new ImagesEmbed(medias.ToArray()) : null;
             var (res, error) = await atProtocol.Repo.CreatePostAsync(text, embed: embed);
             if (res is null)
             {
