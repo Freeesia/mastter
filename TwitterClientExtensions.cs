@@ -1,5 +1,4 @@
 using System.Text;
-using HtmlAgilityPack;
 using Mastonet;
 using Mastonet.Entities;
 using Microsoft.Extensions.Logging;
@@ -8,20 +7,8 @@ using Tweetinvi;
 
 static class TwitterClientExtensions
 {
-    public static async Task CrossPost(this TwitterClient twitter, string id, Status status, IStatusLogStore store, ILogger logger)
+    public static async Task CrossPost(this TwitterClient twitter, Status status, IStatusLogStore store, ILogger logger)
     {
-        // 自分じゃない投稿は無視する
-        if (status.Account.Id != id ||
-            // 返信ではない投稿もしくは自分への返信だけを対象にする
-            !(status.InReplyToAccountId == id || status.InReplyToAccountId == null) ||
-            // メンションされてたら無視する
-            status.Mentions.Any() ||
-            // 公開範囲が非公開だったら無視する
-            status.Visibility != Visibility.Public)
-        {
-            return;
-        }
-        logger.LogInformation($"Posted from Mastodon {status.Id}");
         // 画像があったらダウンロードしてTwitterにアップロードする
         var medias = new List<string>();
         foreach (var media in status.MediaAttachments)
@@ -31,12 +18,10 @@ static class TwitterClientExtensions
             var mediaRes = await twitter.Upload.UploadBinaryAsync(mediaBytes);
             medias.Add(mediaRes.UploadedMediaInfo.MediaIdStr);
         }
-        var htmlDoc = new HtmlDocument();
-        htmlDoc.LoadHtml(status.Content);
-        var text = htmlDoc.DocumentNode.InnerText();
-        var repId = await store.GetStatusAsync(status.InReplyToId);
+        var text = status.GetContentText();
+        var repId = await store.GetTwitterStatusAsync(status.InReplyToId);
         var res = await twitter.PostStatusAsync(text, medias, repId);
-        await store.AddStatusAsync(status.Id, res.Id);
+        await store.AddTwitterStatusAsync(status.Id, res.Id);
         logger.LogInformation($"Posted to Twitter {res.Id}");
     }
 
