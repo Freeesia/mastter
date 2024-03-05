@@ -12,6 +12,14 @@
 			"version": "latest",
 			"dockerDashComposeVersion": "none"
 		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"aliasadidev.nugetpackagemanagergui",
+				"github.vscode-github-actions"
+			]
+		}
 	}
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

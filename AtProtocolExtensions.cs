@@ -28,20 +28,20 @@ static class AtProtocolExtensions
 
         {
             var text = status.GetContentText();
-            var repId = await store.GetBlueskyPostAsync(status.InReplyToId);
-            var embed = medias.Any() ?  new ImagesEmbed(medias.ToArray()) : null;
-            var (res, error) = await atProtocol.Repo.CreatePostAsync(text, embed: embed);
+            var rep = await store.GetBlueskyPostAsync(status.InReplyToId);
+            var embed = medias.Any() ? new ImagesEmbed(medias.ToArray()) : null;
+            var (res, error) = await atProtocol.Repo.CreatePostAsync(text, rep, embed: embed);
             if (res is null)
             {
                 logger.LogError($"Failed to post to Blueskey: {error?.StatusCode} {error?.Detail}");
                 return;
             }
-            await store.AddBlueskyPostAsync(status.Id, res.Uri?.ToString() ?? throw new InvalidOperationException("No URI in response"));
+            await store.AddBlueskyPostAsync(status.Id, new(rep?.Root ?? new(res.Cid!, res.Uri!), new(res.Cid!, res.Uri!)));
             logger.LogInformation($"Posted to Bluesky {res.Uri}");
         }
     }
 
-    public static void Deconstruct<T>(this Result<T> result, out T? value, out FishyFlip.Models.Error? error)
+    public static void Deconstruct<T>(this Result<T> result, out T? value, out ATError? error)
     {
         value = result.IsT0 ? result.AsT0 : default;
         error = result.IsT1 ? result.AsT1 : default;

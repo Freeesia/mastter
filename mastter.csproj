@@ -9,12 +9,12 @@
 
   <ItemGroup>
     <PackageReference Include="ConsoleAppFramework" Version="4.2.4" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.59" />
     <PackageReference Include="Mastonet" Version="2.3.1" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <PackageReference Include="TweetinviAPI" Version="5.0.4" />
-    <PackageReference Include="FishyFlip" Version="1.6.16" />
+    <PackageReference Include="FishyFlip" Version="1.7.43-alpha" />
   </ItemGroup>
 
 </Project>
