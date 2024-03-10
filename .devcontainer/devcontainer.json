@@ -17,7 +17,8 @@
 		"vscode": {
 			"extensions": [
 				"aliasadidev.nugetpackagemanagergui",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"spadin.memento-inputs"
 			]
 		}
 	}

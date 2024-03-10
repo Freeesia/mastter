@@ -20,6 +20,32 @@
             "netCore": {
                 "appProject": "${workspaceFolder}/mastter.csproj"
             }
+        },
+        {
+            "name": "Post Twitter",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/bin/Debug/net7.0/mastter.dll",
+            "args": [
+                "post-twitter",
+                "${input:id}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "id",
+            "type": "command",
+            "command": "memento.promptString",
+            "args": {
+                "id": "id",
+                "description": "Mastodon Post ID",
+            }
         }
     ]
 }

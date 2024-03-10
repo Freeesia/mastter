@@ -1,4 +1,4 @@
-﻿using FishyFlip;
+using FishyFlip;
 using Mastonet;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,6 +11,7 @@ var app = ConsoleApp.CreateBuilder(args)
             .AddSingleton<IStatusLogStore, StatusLogStore>())
     .Build();
 app.AddRootCommand(Run);
+app.AddCommand("post-twitter", PostToTwitter);
 await app.RunAsync();
 
 static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options, IStatusLogStore store)
@@ -65,6 +66,21 @@ static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options,
     await ust.Start();
     // await Post(logger, mastodonMe.Id, (await mastodon.GetAccountStatuses(mastodonMe.Id)).First(), twitter);
 }
+
+static async Task PostToTwitter(ILogger<Program> logger, IOptions<ConsoleOptions> options, [Option(0)]string id)
+{
+    var value = options.Value;
+    var twitter = new TwitterClient(value.TwitterConsumerKey, value.TwitterConsumerSecret, value.TwitterAccessToken, value.TwitterAccessTokenSecret);
+    var twitterMe = await twitter.Users.GetAuthenticatedUserAsync();
+    logger.LogInformation($"Logged in Twitter as {twitterMe.Name} (@{twitterMe.ScreenName})");
+    var mastodon = new MastodonClient(value.MastodonUrl, value.MastodonToken);
+    var mastodonMe = await mastodon.GetCurrentUser();
+    logger.LogInformation($"Logged in Mastodon as {mastodonMe.DisplayName} (@{mastodonMe.UserName})");
+
+    var status = await mastodon.GetStatus(id);
+    await twitter.CrossPost(status, new StatusLogStore(), logger);
+}
+
 
 record ConsoleOptions
 {

@@ -15,7 +15,12 @@ static class TwitterClientExtensions
         {
             using var httpClient = new HttpClient();
             var mediaBytes = await httpClient.GetByteArrayAsync(media.Url);
-            var mediaRes = await twitter.Upload.UploadBinaryAsync(mediaBytes);
+            var mediaRes = media.Type switch
+            {
+                "image" => await twitter.Upload.UploadTweetImageAsync(mediaBytes),
+                "video" => await twitter.Upload.UploadTweetVideoAsync(mediaBytes),
+                _ => throw new NotSupportedException($"Unsupported media type: {media.Type}")
+            };
             medias.Add(mediaRes.UploadedMediaInfo.MediaIdStr);
         }
         var text = status.GetContentText();
