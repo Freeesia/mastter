@@ -35,6 +35,21 @@
             "stopAtEntry": false,
             "envFile": "${workspaceFolder}/.env",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Post Bluesky",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/bin/Debug/net7.0/mastter.dll",
+            "args": [
+                "post-bluesky",
+                "${input:id}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal"
         }
     ],
     "inputs": [

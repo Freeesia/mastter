@@ -1,4 +1,4 @@
-using FishyFlip;
+﻿using FishyFlip;
 using Mastonet;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,6 +12,7 @@ var app = ConsoleApp.CreateBuilder(args)
     .Build();
 app.AddRootCommand(Run);
 app.AddCommand("post-twitter", PostToTwitter);
+app.AddCommand("post-bluesky", PostToBluesky);
 await app.RunAsync();
 
 static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options, IStatusLogStore store)
@@ -81,6 +82,22 @@ static async Task PostToTwitter(ILogger<Program> logger, IOptions<ConsoleOptions
     await twitter.CrossPost(status, new StatusLogStore(), logger);
 }
 
+static async Task PostToBluesky(ILogger<Program> logger, IOptions<ConsoleOptions> options, [Option(0)]string id)
+{
+    var value = options.Value;
+    var atProtocolBuilder = new ATProtocolBuilder()
+        .EnableAutoRenewSession(true)
+        .WithLogger(logger);
+    var atProtocol = atProtocolBuilder.Build();
+    var (atProtocolMe, error) = await atProtocol.Server.CreateSessionAsync(value.BlueskyIdentifier, value.BlueskyAppPassword);
+    logger.LogInformation($"Logged in Bluesky as {atProtocolMe?.Did} (@{atProtocolMe?.Handle})");
+    var mastodon = new MastodonClient(value.MastodonUrl, value.MastodonToken);
+    var mastodonMe = await mastodon.GetCurrentUser();
+    logger.LogInformation($"Logged in Mastodon as {mastodonMe.DisplayName} (@{mastodonMe.UserName}");
+
+    var status = await mastodon.GetStatus(id);
+    await atProtocol.CrossPost(status, new StatusLogStore(), logger);
+}
 
 record ConsoleOptions
 {

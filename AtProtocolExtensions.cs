@@ -8,29 +8,37 @@ static class AtProtocolExtensions
     public static async Task CrossPost(this ATProtocol atProtocol, Status status, IStatusLogStore store, ILogger logger)
     {
         // 画像があったらダウンロードしてBlueskeyにアップロードする
-        var medias = new List<ImageEmbed>();
-        foreach (var media in status.MediaAttachments)
+        Embed? embed = null;
+        if (status.MediaAttachments.All(media => media.Type == "image"))
         {
-            using var httpClient = new HttpClient();
-            using var res = await httpClient.GetAsync(media.Url);
-            res.EnsureSuccessStatusCode();
-            using var stream = await res.Content.ReadAsStreamAsync();
-            using var content = new StreamContent(stream);
-            content.Headers.ContentType = res.Content.Headers.ContentType;
-            var (mediaRes, error) = await atProtocol.Repo.UploadBlobAsync(content);
-            if (mediaRes is null)
+            var images = new List<ImageEmbed>();
+            foreach (var media in status.MediaAttachments)
             {
-                logger.LogError($"Failed to upload media: {error?.StatusCode} {error?.Detail}");
-                continue;
+                var image = await UploadImage(atProtocol, media.Url, logger);
+                if (image is null)
+                {
+                    continue;
+                }
+                images.Add(new(image, media.Description ?? string.Empty));
             }
-            medias.Add(new(mediaRes.Blob.ToImage(), media.Description ?? string.Empty));
+            embed = new ImagesEmbed(images.ToArray());
+        }
+        // 動画があったらプレビュー画像をダウンロードしてBlueskeyにアップロードする
+        else if (status.MediaAttachments.ToArray() is [{ Type: "video" } video])
+        {
+            var image = await UploadImage(atProtocol, video.PreviewUrl, logger);
+            embed = new ExternalEmbed(new External(image, "", video.Description, status.Url), "app.bsky.embed.external");
+        }
+        // それ以外のメディアは未対応
+        else
+        {
+            logger.LogWarning($"Unsupported media type, {status.Id}");
         }
 
         {
             var text = status.GetContentText();
             var rep = await store.GetBlueskyPostAsync(status.InReplyToId);
-            var embed = medias.Any() ? new ImagesEmbed(medias.ToArray()) : null;
-            var (res, error) = await atProtocol.Repo.CreatePostAsync(text, rep, embed: embed);
+            var (res, error) = await atProtocol.Repo.CreatePostAsync(text, embed: embed);
             if (res is null)
             {
                 logger.LogError($"Failed to post to Blueskey: {error?.StatusCode} {error?.Detail}");
@@ -41,7 +49,24 @@ static class AtProtocolExtensions
         }
     }
 
-    public static void Deconstruct<T>(this Result<T> result, out T? value, out ATError? error)
+    private static async Task<Image?> UploadImage(this ATProtocol atProtocol, string mediaUrl, ILogger logger)
+    {
+        using var httpClient = new HttpClient();
+        var res = await httpClient.GetAsync(mediaUrl);
+        res.EnsureSuccessStatusCode();
+        using var stream = await res.Content.ReadAsStreamAsync();
+        using var content = new StreamContent(stream);
+        content.Headers.ContentType = res.Content.Headers.ContentType;
+        var (imageRes, error) = await atProtocol.Repo.UploadBlobAsync(content);
+        if (imageRes is null)
+        {
+            logger.LogError($"Failed to upload media: {error?.StatusCode} {error?.Detail}");
+            return null;
+        }
+        return imageRes.Blob.ToImage();
+    }
+
+    public static void Deconstruct<T>(this Result<T> result, out T? value, out FishyFlip.Models.Error? error)
     {
         value = result.IsT0 ? result.AsT0 : default;
         error = result.IsT1 ? result.AsT1 : default;
