@@ -14,7 +14,7 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <PackageReference Include="TweetinviAPI" Version="5.0.4" />
-    <PackageReference Include="FishyFlip" Version="1.6.16" />
+    <PackageReference Include="FishyFlip" Version="1.8.78" />
   </ItemGroup>
 
 </Project>
