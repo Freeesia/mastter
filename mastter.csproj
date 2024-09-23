@@ -17,6 +17,8 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <PackageReference Include="TweetinviAPI" Version="5.0.4" />
     <PackageReference Include="FishyFlip" Version="1.8.80" />
+    <PackageReference Include="ZString" Version="2.6.0" />
+    <PackageReference Include="OpenGraph-Net" Version="4.0.1" />
   </ItemGroup>
 
 </Project>

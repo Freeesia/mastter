@@ -1,5 +1,5 @@
 using System.Text;
-using Mastonet;
+using HtmlAgilityPack;
 using Mastonet.Entities;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -56,6 +56,13 @@ static class TwitterClientExtensions
                 request.Query.HttpContent = content;
             });
         return res.Model.Data;
+    }
+
+    private static string GetContentText(this Status status)
+    {
+        var htmlDoc = new HtmlDocument();
+        htmlDoc.LoadHtml(status.Content.Replace("</p><p>", Environment.NewLine));
+        return htmlDoc.DocumentNode.InnerText();
     }
 
     record TweetV2(
