@@ -1,21 +1,27 @@
-﻿using FishyFlip;
+﻿using ConsoleAppFramework;
+using FishyFlip;
 using Mastonet;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Tweetinvi;
 
-var app = ConsoleApp.CreateBuilder(args)
-    .ConfigureServices((ctx, services)
-        => services.Configure<ConsoleOptions>(ctx.Configuration)
-            .AddSingleton<IStatusLogStore, StatusLogStore>())
+var configuration = new ConfigurationBuilder()
+    .AddEnvironmentVariables()
     .Build();
-app.AddRootCommand(Run);
-app.AddCommand("post-twitter", PostToTwitter);
-app.AddCommand("post-bluesky", PostToBluesky);
-await app.RunAsync();
 
-static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options, IStatusLogStore store)
+var services = new ServiceCollection()
+    .Configure<ConsoleOptions>(configuration)
+    .AddSingleton<IStatusLogStore, StatusLogStore>();
+
+var app = ConsoleApp.Create();
+app.Add("", Run);
+app.Add("post-twitter", PostToTwitter);
+app.Add("post-bluesky", PostToBluesky);
+await app.RunAsync(args);
+
+static async Task Run([FromServices]ILogger<Program> logger, [FromServices]IOptions<ConsoleOptions> options, [FromServices]IStatusLogStore store)
 {
     var value = options.Value;
     var twitter = new TwitterClient(value.TwitterConsumerKey, value.TwitterConsumerSecret, value.TwitterBearerToken);
@@ -68,7 +74,7 @@ static async Task Run(ILogger<Program> logger, IOptions<ConsoleOptions> options,
     // await Post(logger, mastodonMe.Id, (await mastodon.GetAccountStatuses(mastodonMe.Id)).First(), twitter);
 }
 
-static async Task PostToTwitter(ILogger<Program> logger, IOptions<ConsoleOptions> options, [Option(0)]string id)
+static async Task PostToTwitter([FromServices]ILogger<Program> logger, [FromServices]IOptions<ConsoleOptions> options, [Argument] string id)
 {
     var value = options.Value;
     var twitter = new TwitterClient(value.TwitterConsumerKey, value.TwitterConsumerSecret, value.TwitterAccessToken, value.TwitterAccessTokenSecret);
@@ -82,7 +88,7 @@ static async Task PostToTwitter(ILogger<Program> logger, IOptions<ConsoleOptions
     await twitter.CrossPost(status, new StatusLogStore(), logger);
 }
 
-static async Task PostToBluesky(ILogger<Program> logger, IOptions<ConsoleOptions> options, [Option(0)]string id)
+static async Task PostToBluesky([FromServices]ILogger<Program> logger, [FromServices]IOptions<ConsoleOptions> options, [Argument] string id)
 {
     var value = options.Value;
     var atProtocolBuilder = new ATProtocolBuilder()
