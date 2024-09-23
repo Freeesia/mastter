@@ -13,7 +13,11 @@ var configuration = new ConfigurationBuilder()
 
 var services = new ServiceCollection()
     .Configure<ConsoleOptions>(configuration)
+    .AddLogging(b => b.AddConfiguration(configuration).AddConsole())
     .AddSingleton<IStatusLogStore, StatusLogStore>();
+
+using var serviceProvider = services.BuildServiceProvider();
+ConsoleApp.ServiceProvider = serviceProvider;
 
 var app = ConsoleApp.Create();
 app.Add("", Run);

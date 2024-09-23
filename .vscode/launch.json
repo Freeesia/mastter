@@ -5,7 +5,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/net7.0/mastter.dll",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/mastter.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
@@ -26,7 +26,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/net7.0/mastter.dll",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/mastter.dll",
             "args": [
                 "post-twitter",
                 "${input:id}"
@@ -41,7 +41,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/net7.0/mastter.dll",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/mastter.dll",
             "args": [
                 "post-bluesky",
                 "${input:id}"
