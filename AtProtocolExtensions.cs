@@ -129,7 +129,7 @@ static class AtProtocolExtensions
                 builder.Append(textNode.Text);
                 break;
             case HtmlNode when node.Name == "a":
-                var href = node.GetAttributeValue("href", null);
+                var href = node.GetAttributeValue("href", string.Empty);
                 var start = builder.Length;
                 foreach (var child in node.ChildNodes)
                 {
