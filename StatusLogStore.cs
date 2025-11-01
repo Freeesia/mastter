@@ -1,11 +1,12 @@
+using FishyFlip.Lexicon.App.Bsky.Feed;
 using FishyFlip.Models;
 
 class StatusLogStore : IStatusLogStore
 {
     private readonly Dictionary<string, string> mastodonTwitter = new();
-    private readonly Dictionary<string, Reply> mastodonBluesky = new();
+    private readonly Dictionary<string, ReplyRefDef> mastodonBluesky = new();
 
-    public ValueTask AddBlueskyPostAsync(string mastodonId, Reply rep)
+    public ValueTask AddBlueskyPostAsync(string mastodonId, ReplyRefDef rep)
     {
         mastodonBluesky.Add(mastodonId, rep);
         return default;
@@ -17,7 +18,7 @@ class StatusLogStore : IStatusLogStore
         return default;
     }
 
-    public ValueTask<Reply?> GetBlueskyPostAsync(string? mastodonId)
+    public ValueTask<ReplyRefDef?> GetBlueskyPostAsync(string? mastodonId)
         => new(mastodonBluesky.TryGetValue(mastodonId ?? string.Empty, out var blueskyUri) ? blueskyUri : null);
 
     public ValueTask<string?> GetTwitterStatusAsync(string? mastodonId)
@@ -46,7 +47,7 @@ interface IStatusLogStore
     /// </summary>
     /// <param name="mastodonId">The Mastodon status ID.</param>
     /// <returns>The associated Twitter status ID, or null if no association exists.</returns>
-    ValueTask<Reply?> GetBlueskyPostAsync(string? mastodonId);
+    ValueTask<ReplyRefDef?> GetBlueskyPostAsync(string? mastodonId);
 
     /// <summary>
     /// Adds a mapping between a Mastodon status ID and a Bluesky status URI.
@@ -54,5 +55,5 @@ interface IStatusLogStore
     /// <param name="mastodonId">The Mastodon status ID.</param>
     /// <param name="rep">The Bluesky status URI.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    ValueTask AddBlueskyPostAsync(string mastodonId, Reply rep);
+    ValueTask AddBlueskyPostAsync(string mastodonId, ReplyRefDef rep);
 }

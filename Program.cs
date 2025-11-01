@@ -99,7 +99,7 @@ static async Task PostToBluesky([FromServices]ILogger<Program> logger, [FromServ
         .EnableAutoRenewSession(true)
         .WithLogger(logger);
     var atProtocol = atProtocolBuilder.Build();
-    var (atProtocolMe, error) = await atProtocol.Server.CreateSessionAsync(value.BlueskyIdentifier, value.BlueskyAppPassword);
+    var (atProtocolMe, error) = await atProtocol.AuthenticateWithPasswordResultAsync(value.BlueskyIdentifier, value.BlueskyAppPassword);
     logger.LogInformation($"Logged in Bluesky as {atProtocolMe?.Did} (@{atProtocolMe?.Handle})");
     var mastodon = new MastodonClient(value.MastodonUrl, value.MastodonToken);
     var mastodonMe = await mastodon.GetCurrentUser();

@@ -1,9 +1,13 @@
 using Cysharp.Text;
 using FishyFlip;
+using FishyFlip.Lexicon;
+using FishyFlip.Lexicon.App.Bsky.Embed;
+using FishyFlip.Lexicon.App.Bsky.Richtext;
 using FishyFlip.Models;
 using HtmlAgilityPack;
 using Mastonet.Entities;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using OpenGraphNet;
 using static FishyFlip.Constants;
 
@@ -12,29 +16,25 @@ static class AtProtocolExtensions
     public static async Task CrossPost(this ATProtocol atProtocol, Status status, IStatusLogStore store, ILogger logger)
     {
         // 画像があったらダウンロードしてBlueskeyにアップロードする
-        Embed? embed = null;
+        ATObject? embed = null;
         if (status.MediaAttachments.Any(media => media.Type == "image"))
         {
-            var images = new List<ImageEmbed>();
+            var images = new List<Image>();
             foreach (var media in status.MediaAttachments.Where(m => m.Type == "image"))
             {
-                var image = await UploadImage(atProtocol, media.Url, logger);
+                var image = await UploadImage(atProtocol, media, logger);
                 if (image is null)
                 {
                     continue;
                 }
-                images.Add(new(image, media.Description ?? string.Empty));
+                images.Add(image);
             }
-            embed = new ImagesEmbed([.. images]);
+            embed = new EmbedImages([.. images]);
         }
         // 動画があったらダウンロードしてBlueskeyにアップロードする
         else if (status.MediaAttachments.ToArray() is [{ Type: "video" or "gifv" } media])
         {
-            var video = await UploadVideo(atProtocol, media.Url, logger);
-            if (video is not null)
-            {
-                embed = new VideoEmbed(video);
-            }
+            embed = await UploadVideo(atProtocol, media, logger);
         }
         // それ以外のメディアは未対応
         else
@@ -45,38 +45,36 @@ static class AtProtocolExtensions
         {
             var (text, facets) = status.GetContentText();
             var rep = await store.GetBlueskyPostAsync(status.InReplyToId);
-            if (embed is null && facets.Where(f => f is { Features: [{ Type: FacetTypes.Link }] }).ToArray() is [{ Features: [{ Uri: string url }] }])
+            if (embed is null && facets.Where(f => f is { Features: [{ Type: Link.RecordType }] }).ToArray() is [{ Features: [Link { Uri: string url }] }])
             {
                 try
                 {
-                    var ogp = await OpenGraph.ParseUrlAsync(url).ConfigureAwait(false);
-                    var image = ogp.Image is null ? null : await UploadImage(atProtocol, ogp.Image.AbsoluteUri, logger);
-                    var desc = ogp.Metadata.TryGetValue("og:description", out var d) ? d.FirstOrDefault()?.Value : string.Empty;
-                    embed = new ExternalEmbed(new External(image, ogp.Title, desc, ogp.Url?.AbsoluteUri ?? url));
+                    embed = await atProtocol.OpenGraphParser.GenerateEmbedExternal(url).ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
                     logger.LogWarning($"Failed to fetch OGP: {url}");
                 }
             }
-            var (res, error) = await atProtocol.Repo.CreatePostAsync(text, facets, embed);
+            var (res, error) = await atProtocol.Feed.CreatePostAsync(text, [.. facets], embed: embed);
             if (res is null)
             {
                 logger.LogError($"Failed to post to Blueskey: {error?.StatusCode} {error?.Detail}");
                 return;
             }
-            await store.AddBlueskyPostAsync(status.Id, new(rep?.Root ?? new(res.Cid!, res.Uri!), new(res.Cid!, res.Uri!)));
+            await store.AddBlueskyPostAsync(status.Id, new(rep?.Root ?? new(res.Uri!, res.Cid!), new(res.Uri!, res.Cid!)));
             logger.LogInformation($"Posted to Bluesky {res.Uri}");
         }
     }
 
-    private static async Task<Image?> UploadImage(this ATProtocol atProtocol, string mediaUrl, ILogger logger)
+    private static async Task<Image?> UploadImage(this ATProtocol atProtocol, Attachment media, ILogger logger)
     {
         using var httpClient = new HttpClient();
-        var res = await httpClient.GetAsync(mediaUrl);
+        var res = await httpClient.GetAsync(media.Url);
         res.EnsureSuccessStatusCode();
         using var stream = await res.Content.ReadAsStreamAsync();
         using var content = new StreamContent(stream);
+        content.Headers.ContentLength = res.Content.Headers.ContentLength;
         content.Headers.ContentType = res.Content.Headers.ContentType;
         var (imageRes, error) = await atProtocol.Repo.UploadBlobAsync(content);
         if (imageRes is null)
@@ -84,24 +82,25 @@ static class AtProtocolExtensions
             logger.LogError($"Failed to upload media: {error?.StatusCode} {error?.Detail}");
             return null;
         }
-        return imageRes.Blob.ToImage();
+        return new(imageRes.Blob, media.Description!);
     }
 
-    private static async Task<Video?> UploadVideo(this ATProtocol atProtocol, string mediaUrl, ILogger logger)
+    private static async Task<EmbedVideo?> UploadVideo(this ATProtocol atProtocol, Attachment media, ILogger logger)
     {
         using var httpClient = new HttpClient();
-        var res = await httpClient.GetAsync(mediaUrl);
+        var res = await httpClient.GetAsync(media.Url);
         res.EnsureSuccessStatusCode();
         using var stream = await res.Content.ReadAsStreamAsync();
         using var content = new StreamContent(stream);
+        content.Headers.ContentLength = res.Content.Headers.ContentLength;
         content.Headers.ContentType = res.Content.Headers.ContentType;
-        var (imageRes, error) = await atProtocol.Repo.UploadBlobAsync(content);
-        if (imageRes is null)
+        var (videoRes, error) = await atProtocol.Repo.UploadBlobAsync(content);
+        if (videoRes is null)
         {
             logger.LogError($"Failed to upload media: {error?.StatusCode} {error?.Detail}");
             return null;
         }
-        return imageRes.Blob.ToVideo();
+        return new(videoRes.Blob, alt: media.Description!);
     }
 
     private static (string text, Facet[] facets) GetContentText(this Status status)
