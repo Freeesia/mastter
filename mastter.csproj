@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.10" />
     <PackageReference Include="TweetinviAPI" Version="5.0.4" />
-    <PackageReference Include="FishyFlip" Version="3.11.0" />
+    <PackageReference Include="FishyFlip" Version="4.1.0" />
     <PackageReference Include="ZString" Version="2.6.0" />
     <PackageReference Include="OpenGraph-Net" Version="4.0.1" />
   </ItemGroup>
